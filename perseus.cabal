@@ -1,0 +1,29 @@
+name:                perseus
+version:             0.1.0.0
+synopsis:            time series database
+description:         A distributed database for numeric time series sampled at regular tempo
+homepage:            github.com/bergey/perseus
+license:             BSD3
+license-file:        LICENSE
+author:              Daniel Bergey
+maintainer:          bergey@teallabs.org
+-- copyright:
+category:            Database
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+cabal-version:       >=1.10
+
+executable perseus
+  main-is:             Main.hs
+  -- other-modules:
+  -- other-extensions:
+  build-depends:       base >=4.8 && <4.10,
+                       aeson >= 1.1 && < 1.3,
+                       bytestring >= 0.10 && < 0.11,
+                       cereal >= 0.5 && < 0.6,
+                       cereal-vector >= 0.2 && < 0.3,
+                       cereal-text >= 0.1 && < 0.2,
+                       text >= 1.2 && < 1.3,
+                       vector >= 0.11 && < 0.13
+  hs-source-dirs:      src
+  default-language:    Haskell2010
