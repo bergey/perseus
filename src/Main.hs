@@ -42,15 +42,49 @@ data Series = Series !Metric !(V.Vector Sample)
 data Incoming = Incoming !Metric !Sample
 
 path :: FilePath
-path = "data"
+path = "data/"
 
-perseus :: [String] -> String
+data Request =
+  Post String String
+  | Get String
+
+data Response =
+  PostOk String String
+  | GetOk String String
+
+data Error = BadRequest
+
+metricFilename :: String -> FilePath
+metricFilename metric = path ++ metric
+
+perseus :: Request -> IO Response
 perseus = \case
-    ["put", metric, value] -> "OK, " ++ metric ++ "=" ++ value
-    ["get", metric ] -> "GOT"
-    _ -> "Bad Request"
+  Post metric value -> do
+    writeFile (metricFilename metric) value
+    return $ PostOk metric value
+  Get metric -> do
+    value <- readFile (metricFilename metric)
+    return $ GetOk metric value
+
+parseRequest :: [String] -> Either Error Request
+parseRequest = \case
+    ["put", metric, value] -> Right $ Post metric value
+    ["get", metric ] -> Right $ Get metric
+    _ -> Left BadRequest
+
+logResponse :: Response -> String
+logResponse = \case
+  PostOk metric value -> "OK, wrote " ++ metric ++ "=" ++ value
+  GetOk metric value -> "GOT " ++ metric ++ "=" ++ value
+
+logError :: Error -> String
+logError BadRequest = "Bad Request"
+
+logResult :: Either Error Response -> String
+logResult = either logError logResponse
 
 main :: IO ()
 main = do
-  args <- getArgs
-  putStrLn $ perseus args
+  req <- parseRequest <$> getArgs
+  resp <- traverse perseus req
+  putStrLn $ logResult resp
