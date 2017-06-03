@@ -21,9 +21,6 @@ perseus = \case
     value <- readFile (metricFilename metric)
     return $ GetOk metric value
 
-path :: FilePath
-path = "data/"
-
 data Request =
   Post String String
   | Get String
@@ -33,9 +30,6 @@ data Response =
   | GetOk String String
 
 data Error = BadRequest
-
-metricFilename :: String -> FilePath
-metricFilename metric = path ++ metric
 
 parseRequest :: [String] -> Either Error Request
 parseRequest = \case

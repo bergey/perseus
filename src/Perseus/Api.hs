@@ -9,4 +9,4 @@ import Servant.API
 
 type SampleApi =
   "read" :> Capture "metric" String :> Get '[PlainText] String
-  :<|> "write" :> Capture "metric" String :> Post '[PlainText] String  -- TODO "" only
+  :<|> "write" :> Capture "metric" String :> Capture "value" String :> Post '[PlainText] String  -- TODO "" only
