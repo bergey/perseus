@@ -1,7 +1,9 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DeriveGeneric #-}
 
 module Main where
 
+import System.Environment
 import Data.Aeson
 import qualified Data.ByteString as BS
 import Data.Serialize
@@ -39,5 +41,16 @@ data Series = Series !Metric !(V.Vector Sample)
 
 data Incoming = Incoming !Metric !Sample
 
+path :: FilePath
+path = "data"
+
+perseus :: [String] -> String
+perseus = \case
+    ["put", metric, value] -> "OK, " ++ metric ++ "=" ++ value
+    ["get", metric ] -> "GOT"
+    _ -> "Bad Request"
+
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = do
+  args <- getArgs
+  putStrLn $ perseus args
