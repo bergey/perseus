@@ -1,49 +1,54 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Main where
 
+import Perseus.Api
 import Perseus.Types
 
 import System.Environment
+import Data.Aeson
+import Data.Proxy
+import GHC.Generics
+import Network.HTTP.Client (newManager, defaultManagerSettings)
+import Servant.API
+import Servant.Client
+import System.Exit
 
 main :: IO ()
 main = do
-  req <- parseRequest <$> getArgs
-  resp <- traverse perseus req
-  putStrLn $ logResult resp
+  args <- getArgs
+  case parseRequest args of
+    Nothing -> die help
+    Just req -> do
+      manager <- newManager defaultManagerSettings
+      resp <- runClientM (perseus req) (ClientEnv manager hostInfo)
+      either (die . show) putStrLn resp
 
-perseus :: Request -> IO Response
+perseus :: Request -> ClientM String
 perseus = \case
   Post metric value -> do
-    writeFile (metricFilename metric) value
-    return $ PostOk metric value
+    writeSample metric value
   Get metric -> do
-    value <- readFile (metricFilename metric)
-    return $ GetOk metric value
+    readSample metric
+
+readSample :<|> writeSample = client sampleApi
+
+hostInfo :: BaseUrl
+hostInfo = BaseUrl Http "localhost" 8081 ""
 
 data Request =
   Post String String
   | Get String
+  deriving Show
 
-data Response =
-  PostOk String String
-  | GetOk String String
-
-data Error = BadRequest
-
-parseRequest :: [String] -> Either Error Request
+parseRequest :: [String] -> Maybe Request
 parseRequest = \case
-    ["put", metric, value] -> Right $ Post metric value
-    ["get", metric ] -> Right $ Get metric
-    _ -> Left BadRequest
+    ["put", metric, value] -> Just $ Post metric value
+    ["get", metric ] -> Just $ Get metric
+    _ -> Nothing
 
-logResponse :: Response -> String
-logResponse = \case
-  PostOk metric value -> "OK, wrote " ++ metric ++ "=" ++ value
-  GetOk metric value -> "GOT " ++ metric ++ "=" ++ value
-
-logError :: Error -> String
-logError BadRequest = "Bad Request"
-
-logResult :: Either Error Response -> String
-logResult = either logError logResponse
+help :: String
+help = "usage:\nperseus-client put KEY VALUE\nperseus-client get KEY"

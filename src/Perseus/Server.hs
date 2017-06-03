@@ -20,9 +20,6 @@ server = read :<|> write where
     -- return $ GetOk metric value
     return $ "OK, wrote " ++ metric ++ "=" ++ value ++ "\n"
 
-sampleApi :: Proxy SampleApi
-sampleApi = Proxy
-
 app :: Application
 app = serve sampleApi server
 
