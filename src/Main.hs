@@ -28,13 +28,16 @@ instance FromJSON Sample
 
 data Metric = Metric {
   name :: Text, -- TODO maybe this should just be a BS validated as UTF-8
-  labels :: V.Vector (Text, Text),
-  samples :: V.Vector Sample
+  labels :: V.Vector (Text, Text)
   } deriving (Eq, Ord, Generic, Show)
 
 instance ToJSON Metric
 instance FromJSON Metric
 instance Serialize Metric
+
+data Series = Series !Metric !(V.Vector Sample)
+
+data Incoming = Incoming !Metric !Sample
 
 main :: IO ()
 main = putStrLn "Hello, Haskell!"
