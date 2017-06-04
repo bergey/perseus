@@ -22,9 +22,9 @@ import System.Exit
 
 main :: IO ()
 main = do
-  req <- O.execParser helpParser
+  config <- O.execParser helpParser
   manager <- newManager defaultManagerSettings
-  resp <- runClientM (perseus req) (ClientEnv manager hostInfo)
+  resp <- runClientM (perseus (request config)) (ClientEnv manager (hostInfo config))
   either (die . show) putStrLn resp
 
 perseus :: Request -> ClientM String
@@ -36,25 +36,35 @@ perseus = \case
 
 readSample :<|> writeSample = client sampleApi
 
-hostInfo :: BaseUrl
-hostInfo = BaseUrl Http "localhost" 8081 ""
+hostInfo :: Config -> BaseUrl
+hostInfo config = BaseUrl Http (host config) (port config) ""
 
 data Request =
   Post String String
   | Get String
   deriving Show
 
-cliParser :: O.Parser Request
-cliParser = O.subparser (
-  O.command "put" (O.info putOptions (O.progDesc "write a key value pair"))
-  <> O.command "get" (O.info getOptions (O.progDesc "get the value of the given key")))
+data Config = Config {
+  host :: String,
+  port :: Int,
+  request :: Request
+  }
+
+cliParser :: O.Parser Config
+cliParser = Config
+  <$> O.strOption (O.long "host" <> O.short 'h' <> O.value "localhost")
+  <*> O.option O.auto (O.long "port" <> O.short 'p' <> O.value 8081)
+  <*> requestParser
   where
+    requestParser = O.subparser (
+      O.command "put" (O.info putOptions (O.progDesc "write a key value pair"))
+      <> O.command "get" (O.info getOptions (O.progDesc "get the value of the given key")))
     putOptions = Post
       <$> getParser
       <*> O.strOption (O.long "value" <> O.short 'v')
     getOptions = Get <$> getParser
     getParser = O.strOption (O.long "key" <> O.short 'k')
 
-helpParser :: O.ParserInfo Request
+helpParser :: O.ParserInfo Config
 helpParser = O.info (O.helper <*> cliParser)
   (O.fullDesc <> O.header "perseus-client - minimal CLI client for Perseus TSDB")
