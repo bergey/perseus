@@ -10,22 +10,22 @@ import Perseus.Types
 
 import System.Environment
 import Data.Aeson
+import Data.Monoid
 import Data.Proxy
 import GHC.Generics
 import Network.HTTP.Client (newManager, defaultManagerSettings)
+import qualified Options.Applicative        as O
+import qualified Options.Applicative.Types  as O
 import Servant.API
 import Servant.Client
 import System.Exit
 
 main :: IO ()
 main = do
-  args <- getArgs
-  case parseRequest args of
-    Nothing -> die help
-    Just req -> do
-      manager <- newManager defaultManagerSettings
-      resp <- runClientM (perseus req) (ClientEnv manager hostInfo)
-      either (die . show) putStrLn resp
+  req <- O.execParser helpParser
+  manager <- newManager defaultManagerSettings
+  resp <- runClientM (perseus req) (ClientEnv manager hostInfo)
+  either (die . show) putStrLn resp
 
 perseus :: Request -> ClientM String
 perseus = \case
@@ -44,11 +44,17 @@ data Request =
   | Get String
   deriving Show
 
-parseRequest :: [String] -> Maybe Request
-parseRequest = \case
-    ["put", metric, value] -> Just $ Post metric value
-    ["get", metric ] -> Just $ Get metric
-    _ -> Nothing
+cliParser :: O.Parser Request
+cliParser = O.subparser (
+  O.command "put" (O.info putOptions (O.progDesc "write a key value pair"))
+  <> O.command "get" (O.info getOptions (O.progDesc "get the value of the given key")))
+  where
+    putOptions = Post
+      <$> getParser
+      <*> O.strOption (O.long "value" <> O.short 'v')
+    getOptions = Get <$> getParser
+    getParser = O.strOption (O.long "key" <> O.short 'k')
 
-help :: String
-help = "usage:\nperseus-client put KEY VALUE\nperseus-client get KEY"
+helpParser :: O.ParserInfo Request
+helpParser = O.info (O.helper <*> cliParser)
+  (O.fullDesc <> O.header "perseus-client - minimal CLI client for Perseus TSDB")
